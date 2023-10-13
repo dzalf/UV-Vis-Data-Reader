@@ -30,14 +30,13 @@
 
   printf('Selecting a group of .txt files to work on...\n');
 
-  [filename, pathname] = uigetfile('*.csv', "Select a group of .csv files\
+  % clear files
+  [files, pathname] = uigetfile('*.csv', "Select a group of .csv files\
   [from the SAME experiment]", 'MultiSelect', 'on');
-
-  [~,elements] = size(filename);   % Count how many files were imported
 
   keep_going = false;   % Flag to stop operation
 
-  if isequal(filename,0)
+  if isequal(files,0)
 
     fprintf('\r\nOperation cancelled!\n')
 
@@ -47,13 +46,19 @@
 
   else
 
+    % clear filenames
+
+    filenames = cellstr(files)
+
+    [~,elements] = size(filenames)  % Count how many files were imported
+
     disp(['User selected  ' num2str(elements) ' files:'])
 
     keep_going = true;
 
     for idx=1:elements
 
-      disp(filename{idx})
+      disp(filenames{idx})
 
     end
 
@@ -61,15 +66,13 @@
 
 
   % Stop if user did not select anything
-
   if isequal(keep_going, true)
 
     % loop over the files we collected and transfer data
-
     for element_idx = 1:elements
 
       % Here we just extract the number of rows we will process
-      file{element_idx} = char(filename(element_idx));
+      file{element_idx} = char(filenames(element_idx));
 
       % temporarily store data before transfering it to our data_matrix
       data = dlmread(strcat(pathname, file{element_idx}), ",");
@@ -102,7 +105,7 @@
 
       for idx =1:elements
 
-        printf("File >> %s elements: %d\n", filename{idx}, rows(idx));
+        printf("File >> %s elements: %d\n", filenames{idx}, rows(idx));
 
       end
 
@@ -121,8 +124,8 @@
 
       % Transfer first column --> wavelength values
       % we assume that the start position of the wavelength values is the same
-      data_matrix(:,1) = data(start{3}:end,1);
-
+      % --> might be wrong!
+      data_matrix(:,1) = data(start{element_idx}:end,1); #TODO: error here --> starting values are not at the same position
 
       % Extract wavelength column
       wn = data_matrix(:,1);
@@ -132,9 +135,9 @@
       % Now just join the columns from the different files
       for file_idx = 1:elements
 
-        fprintf('\nWorking with file %s: %s\r\n', num2str(file_idx), filename{file_idx});
+        fprintf('\nWorking with file %s: %s\r\n', num2str(file_idx), filenames{file_idx});
 
-        file = char(filename(file_idx));
+        file = char(filenames(file_idx));
 
         % open next file and import csv data
         mat_temp = dlmread(strcat(pathname,file), ",");
@@ -144,6 +147,8 @@
         colPtr = colPtr+1;
 
       end
+
+
 
       # ****************************
       #       Data import done!
@@ -276,7 +281,7 @@
       % Create ylabel
       ylabel('Amplitude [arb. units]', 'FontSize',12);
 
-      hFig = legend(filename);
+      hFig = legend(filenames);
       set(hFig, "interpreter", "none");
 
       % Ask user if data should be saved
@@ -286,25 +291,25 @@
       % Write csv in the same location as the incoming data
       if strcmp(btn, "Yeah")
 
-        default_filename = {"experiment"};
-        desired_filename = inputdlg ("Give me a filename:", "Filename", [1, 30], default_filename)
+        default_filenames = {"experiment"};
+        desired_filenames = inputdlg ("Give me a filenames:", "Filename", [1, 30], default_filenames)
 
-        if isempty(desired_filename)
+        if isempty(desired_filenames)
 
-          desired_filename = {};
-          desired_filename{1} = default_filename{1};
+          desired_filenames = {};
+          desired_filenames{1} = default_filenames{1};
 
-        elseif strcmp(desired_filename{1}, '')
+        elseif strcmp(desired_filenames{1}, '')
 
-          desired_filename = {};
-          desired_filename{1} = default_filename{1};
+          desired_filenames = {};
+          desired_filenames{1} = default_filenames{1};
 
         endif
 
-        filename_csv = sprintf("%s%s-%s_%s.csv",pathname, session_name{1}, ...
-        desired_filename{1}, strftime ("%d-%m-%Y_%H%M%S", localtime (time ())));
+        filenames_csv = sprintf("%s%s-%s_%s.csv",pathname, session_name{1}, ...
+        desired_filenames{1}, strftime ("%d-%m-%Y_%H%M%S", localtime (time ())));
 
-        dlmwrite (filename_csv, data_matrix);
+        dlmwrite (filenames_csv, data_matrix);
 
       else
 
