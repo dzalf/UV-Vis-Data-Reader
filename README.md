@@ -21,7 +21,10 @@ This eliminates the need (and the _urge_) of using the VisionLite software (for 
 5. Final data files can be easily opened with LibreOffice Calc (preinstalled in all research PCs)
 
 ## TODO:
-[ ] Add peak detections
+[ ] Add peaks detection
+[ ] Add markers
+[ ] Correct single file reading
+
 
 ## **Screenshots**
 
