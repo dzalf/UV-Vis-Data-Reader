@@ -15,3 +15,4 @@ https://github.com/DrosteEffect/BrewerMap
 2. Run the file `uv-vis-loader.m` and follow the instructions
 3. Data can be plotted using different color schemes taken from the color theory from [Cynthia Brewer](http://colorbrewer.org)
 4. Merged data will be saved in _.csv_ format
+5. Final data files can be easily opened with LibreOffice Calc (preinstalled in all research PCs)
