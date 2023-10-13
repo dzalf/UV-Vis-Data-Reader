@@ -20,6 +20,12 @@ This eliminates the need (and the _urge_) of using the VisionLite software (for 
 4. Merged data will be saved in _.csv_ format
 5. Final data files can be easily opened with LibreOffice Calc (preinstalled in all research PCs)
 
+## TODO:
+[ ] Add peaks detection
+[ ] Add markers
+[ ] Correct single file reading
+
+
 ## **Screenshots**
 
 - A typical Methyl Blue plot using "_Sequential-Dark2_" color scheme:
