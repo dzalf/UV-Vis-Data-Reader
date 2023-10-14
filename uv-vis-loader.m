@@ -1,332 +1,468 @@
-  %  ******************** Nanofunctional Materials Group *********************
-  % File: uv-vis-loader.m
+  %  ******************** nanofunctional materials group *********************
+  %
+  % File: UV-vis-loader.m
   % Brief:  Data import, experiment merging, plotting and logging into csv files
-  %         for UV-Vis system. We use color schemes for plotting.
+  %         for uv-vis system. we use color schemes for plotting.
   % Author: Dr. Daniel Melendrez
   % Date: Oct 2023
   % Version: 1.0
-
+  %
   % Cleanup our environment
+
   clc
   clear
-  % close all % --> uncomment line if you want to keep plots open
+  close all % --> uncomment line if you want to keep plots open
 
-  header_asteriscs = "*******************************";
+  pkg load signal  % requires a connection to download the package
+  addpath(sprintf("%s\\%s", pwd(),"libs"))  %include helper modules/libs
+
+  header_asteriscs = "***********************************************";
+
+  printf("\r\n%s\r\n", header_asteriscs);
+  printf('Uv-Vis Spectra loader, processor and plotter\n');
+  printf("%s\r\n", header_asteriscs);
 
   session_name = [];
-  default_session = {"UVvis"};
+  default_session = {"UV-Vis Spectra"};
 
-  session_name = inputdlg ("Provide a session name: [Default = ""UVvis""]", "Session name",[1,20], default_session);
+  session_name = inputdlg (sprintf("Provide a session name: [default = ""%s""]",...
+  default_session{1}),...
+  "session name",[1,20], default_session);
 
-  if or (isempty(session_name), strcmp(session_name{1}, ''))
-    session_name = {"UVvis"};
+  if isempty(session_name)
+
+    session_name = default_session{1};
+
+  elseif strcmp(session_name{1}, '')
+
+    session_name = default_session{1};
+
   endif
 
   % Import multiple csv files (from the same experiment)
-  msg_handle = msgbox ("Please select a group of .csv files from the\
-  SAME experiment...", "Files selection", 'warn');
+  %msg_handle = msgbox ("Please select a group of .csv files from the\
+  %same experiment...", "Files selection", 'warn');
 
-  waitfor(msg_handle)
+  %waitfor(msg_handle)
 
+  printf("\r\n%s\r\n", header_asteriscs);
   printf('Selecting a group of .txt files to work on...\n');
+  printf("%s\r\n", header_asteriscs);
 
-  % clear files
   [files, pathname] = uigetfile('*.csv', "Select a group of .csv files\
-  [from the SAME experiment]", 'MultiSelect', 'on');
+  [from the same experiment]", 'multiselect', 'on');
 
-  keep_going = false;   % Flag to stop operation
+  keep_going = false;   % flag to stop operation
 
   if isequal(files,0)
 
+    printf("\r\n%s\r\n", header_asteriscs);
     fprintf('\r\nOperation cancelled!\n')
 
-    err = errordlg("Opening files cancelled", "Cancelled");
+    err = errordlg("Opening files cancelled", "cancelled");
 
     waitfor(err)
 
   else
 
-    % clear filenames
+    filenames = cellstr(files);
 
-    filenames = cellstr(files)
+    [~,total_sets] = size(filenames) ; % count how many files were imported
 
-    [~,elements] = size(filenames)  % Count how many files were imported
-
-    disp(['User selected  ' num2str(elements) ' files:'])
+    disp(['User selected  ' num2str(total_sets) ' files:'])
 
     keep_going = true;
 
-    for idx=1:elements
+    for idx=1:total_sets
 
       disp(filenames{idx})
 
     end
 
-  end
+  endif
 
-
-  % Stop if user did not select anything
+  % stop if user did not select anything
   if isequal(keep_going, true)
 
-    % loop over the files we collected and transfer data
-    for element_idx = 1:elements
+    peaks_vals = cell(1, total_sets);
+    peaks_pos = cell(1, total_sets);
+    peaks_extras = cell(1, total_sets);
 
-      % Here we just extract the number of rows we will process
-      file{element_idx} = char(filenames(element_idx));
+    % loop over the files we collected and transfer data
+    for set_idx = 1:total_sets
+
+      % here we just extract the number of rows we will process
+      file{set_idx} = char(filenames(set_idx));
 
       % temporarily store data before transfering it to our data_matrix
-      data = dlmread(strcat(pathname, file{element_idx}), ",");
+      data = dlmread(strcat(pathname, file{set_idx}), ",");
 
       % extract range where data begins --> using custom function
       % --> this is necessary because the csv reader fills zeros
       % in the rows where the header info is located
-      [start{element_idx}, dims{element_idx}] = range_finder(data);
+      [start_pos{set_idx}, dims{set_idx}] = range_finder(data);
 
       % set how many rows and columns our data has
-      rows(element_idx) = dims{element_idx}(1);
-      cols(element_idx) = dims{element_idx}(2);
+      non_zeros(set_idx) = dims{set_idx}(1);
+      rows(set_idx) = dims{set_idx}(2);
+      cols(set_idx) = dims{set_idx}(3);
 
     end
 
-    % Verify if the total number of rows is identical to be able to continue
+    % verify if the total number of rows is identical to be able to continue
     % -> all data files must have same length
 
     keep_going = false;
 
-    if isequal(range(rows), 0)
+    if isequal(range(non_zeros), 0)
 
       keep_going = true;
 
     else
 
-      fprintf("%s\r\n", header_asteriscs);
+      fprintf("\n%s\r\n", header_asteriscs);
 
       disp("Error processing files!")
 
-      for idx =1:elements
+      for idx =1:total_sets
 
-        printf("File >> %s elements: %d\n", filenames{idx}, rows(idx));
+        printf("File >> %s. Elements: %d\n", filenames{idx}, non_zeros(idx));
 
-      end
+      endfor
 
       h = errordlg ("Data files have incompatible dimensions.\n \
-      Please select new set", "Data range error!");
+      please select new set", "Data range error!");
 
     endif
 
-    % Proceed if data has the same length
-    if isequal(keep_going, true)
+    % Request peak threshold
+    peak_thres_str = {};
 
-      max_rows = max(rows);
+    while (isempty(peak_thres_str))
 
-      % Create data holder for all experiments
-      data_matrix = zeros(max_rows,elements + 1);
+      peak_thres_str = inputdlg ("Provide a minimum peak height:",...
+      "Peak Heigth threshold",[1,10]);
 
-      % Transfer first column --> wavelength values
-      % we assume that the start position of the wavelength values is the same
-      % --> might be wrong!
-      data_matrix(:,1) = data(start{element_idx}:end,1); #TODO: error here --> starting values are not at the same position
+      % If we are able to parse value into a double, continue
+      if ~isnan(str2double(peak_thres_str))
 
-      % Extract wavelength column
-      wn = data_matrix(:,1);
-
-      colPtr = 2;   % column pointer to transfer columns --> experimental data
-
-      % Now just join the columns from the different files
-      for file_idx = 1:elements
-
-        fprintf('\nWorking with file %s: %s\r\n', num2str(file_idx), filenames{file_idx});
-
-        file = char(filenames(file_idx));
-
-        % open next file and import csv data
-        mat_temp = dlmread(strcat(pathname,file), ",");
-
-        data_matrix(:,colPtr) = mat_temp(start{file_idx}:end,2);
-
-        colPtr = colPtr+1;
-
-      end
-
-
-
-      # ****************************
-      #       Data import done!
-      # ****************************
-
-      fprintf("\r\nNow plotting data...")
-
-      scheme_labels = {"Diverging", "Qualitative", "Sequential"};
-
-      schemes = {
-      {"BrBG",
-      "PiYG",
-      "PRGn",
-      "PuOr",
-      "RdBu",
-      "RdGy",
-      "RdYlBu",
-      "RdYlGn",
-      "Spectral"};
-
-      {"Accent",
-      "Dark2",
-      "Paired",
-      "Pastel1",
-      "Pastel2",
-      "Set1",
-      "Set2",
-      "Set3" };
-
-      { "PuBuGn",
-      "PuRd",
-      "Purples",
-      "RdPu",
-      "Reds",
-      "YlGn",
-      "YlGnBu",
-      "YlOrBr",
-      "YlOrRd"}
-      };
-
-      keep_going = false;
-      cat = [];
-
-      cat = listdlg ("ListString", scheme_labels, ...
-      "Name", "Select scheme category for plotting",...
-      "SelectionMode", "Single", ...
-      "PromptString",  "Select one category:",...
-      "ListSize", [300 80]);
-
-      if ~isempty(cat)
-
-        keep_going = true;
-
-      endif
-
-      if isequal(keep_going, true)
-        sch = [];
-
-        sch = listdlg ("ListString", schemes(cat, :), ...
-        "Name", "Select color scheme for plotting",...
-        "SelectionMode", "Single", ...
-        "PromptString",  sprintf("Select one item from ""%s"" scheme", scheme_labels{cat}),...
-        "ListSize", [300 150]);
-
-        if ~isempty(sch)
-
-          color_scheme = schemes{cat}{sch};
-
-        else
-
-          wrn_hand = warndlg("No scheme item selected. Applying Qualitative-Dark2->[2,2]");
-          waitfor(wrn_hand);
-
-          color_scheme = schemes{2}{2};
-
-        endif
+        peak_threshold = str2double(peak_thres_str);
+        break;
 
       else
 
-        wrn_hand = warndlg("No scheme category selected. Applying Qualitative-Dark2->[2,2]");
-        waitfor(wrn_hand);
-
-        color_scheme = schemes{2}{2}
+        peak_thres_str = {};
 
       endif
 
+    endwhile
 
-      % Define some distinguishable colors according to the following schemes:
-      % Diverging | Qualitative | Sequential
-      % for more information, please read brewermap.m
+  endif
 
-      %  Diverging | Qualitative |  Sequential
-      % ----------|-------------|------------------
-      %  BrBG     |  Accent     |  Blues    PuBuGn
-      %  PiYG     |  Dark2      |  BuGn     PuRd
-      %  PRGn     |  Paired     |  BuPu     Purples
-      %  PuOr     |  Pastel1    |  GnBu     RdPu
-      %  RdBu     |  Pastel2    |  Greens   Reds
-      %  RdGy     |  Set1       |  Greys    YlGn
-      %  RdYlBu   |  Set2       |  OrRd     YlGnBu
-      %  RdYlGn   |  Set3       |  Oranges  YlOrBr
-      %  Spectral |             |  PuBu     YlOrRd
+  % proceed if data has the same length
+  if isequal(keep_going, true)
 
-      # TODO: Create list dialog
+    max_rows = max(non_zeros);
 
+    % create data holder for all experiments
+    data_matrix = zeros(max_rows,total_sets + 1);
 
-      % Plot our results on the same graph
-      figure
-      hold on
-      grid on
-      grid minor
+    % transfer first column --> wavelength values
+    % we assume that the start position of the wavelength values is the same
+    % --> might be wrong!
+    # todo: error here --> starting values are not at the same position
+    data_matrix(:,1) = data(start_pos{set_idx}:rows(set_idx),1);
 
-      schemes = brewermap(elements, color_scheme);
-      colorPtr = 1;
+    % extract wavelength column
+    wn = data_matrix(:,1);
 
-      for col_idx=2:elements + 1
+    colptr = 2;   % column pointer to transfer columns --> experimental data
 
-        plot(wn,data_matrix(:,col_idx), 'Color', schemes(colorPtr, :), 'LineWidth', 1.5);
+    printf("\r\n%s\r\n", header_asteriscs);
 
-        colorPtr = colorPtr + 1;
+    % now just join the columns from the different files
+    for file_idx = 1:total_sets
 
-      end
+      fprintf('\r\nWorking with file %s: %s\n', num2str(file_idx),...
+      filenames{file_idx});
 
-      % Plot title
-      title(sprintf("Experimental results: %s", session_name{1}), 'FontSize',16);
+      file = char(filenames(file_idx));
 
-      % Create xlabel
-      xlabel('Wavelength [nm]', 'FontSize',12);
+      % open next file and import csv data
+      mat_temp = dlmread(strcat(pathname,file), ",");
 
-      % Create ylabel
-      ylabel('Amplitude [arb. units]', 'FontSize',12);
+      data_matrix(:,colptr) = mat_temp(start_pos{file_idx}:end,2);
 
-      hFig = legend(filenames);
-      set(hFig, "interpreter", "none");
+      % Find data peaks
+      fprintf("Finding peaks...\r\n");
 
-      % Ask user if data should be saved
-      btn = questdlg ("Do you want to save .csv file?",...
-      "Save file?", "Yeah", "Nah", "Yeah");
+      [pks, pks_loc, pks_ext] = findpeaks(data_matrix(:,colptr),...
+      "DoubleSided",...
+      "MinPeakHeight", peak_threshold);
 
-      % Write csv in the same location as the incoming data
-      if strcmp(btn, "Yeah")
+      peaks_vals(:,file_idx) = pks;
+      peaks_pos(:, file_idx) = pks_loc;
+      peaks_extras(:, file_idx) = pks_ext;
 
-        default_filenames = {"experiment"};
-        desired_filenames = inputdlg ("Give me a filenames:", "Filename", [1, 30], default_filenames)
+      colptr = colptr+1;
 
-        if isempty(desired_filenames)
+    end
 
-          desired_filenames = {};
-          desired_filenames{1} = default_filenames{1};
+    % Report peaks in the console
+    printf("\r\n%s\r\n", header_asteriscs);
+    fprintf("Peaks with a height of %.2f found at: \r\n\n", peak_threshold);
+    # fprintf("⎡Data Set >>\n⎥Wavelengths >> \n⎣Heights >> \r\n");
 
-        elseif strcmp(desired_filenames{1}, '')
+    for idx = 1:total_sets
 
-          desired_filenames = {};
-          desired_filenames{1} = default_filenames{1};
+      fprintf("⎡Set >>\t");
 
+      peaks_indices = peaks_pos{:,idx};
+      peaks_wavelength = wn(peaks_pos{:,idx});
+      peaks_values = data_matrix(peaks_indices, idx+1);
+
+      fprintf("%s\r\n", filenames{idx});
+      fprintf("⎥WL  >>\t");
+      # Print wavelength locations on the top row
+      for pk_idx=1:length(peaks_wavelength)
+
+        fprintf("%d", peaks_wavelength(pk_idx));
+
+        % Print separators
+        if (pk_idx < length(peaks_wavelength))
+          fprintf(" ¦ ");
+        else
+          fprintf("\n");
         endif
 
+      endfor
+
+      # Print peak heights
+      fprintf("⎣H   >>\t");
+      for pk_idx=1:length(peaks_values)
+
+        fprintf("%0.3f", peaks_values(pk_idx));
+
+        % Print separators
+        if (pk_idx < length(peaks_values))
+          fprintf(" ¦ ");
+        else
+          fprintf("\n");
+        endif
+
+      endfor
+
+      fprintf("\r\n");
+
+    endfor
+
+    # ****************************
+    #       Data import done!
+    # ****************************
+    printf("\n%s\n", header_asteriscs);
+    fprintf("Now plotting data...")
+    printf("\n%s\r\n", header_asteriscs);
+
+    scheme_labels = {"Diverging", "Qualitative", "Sequential"};
+
+    schemes = {
+    {"BrBG",
+    "PiYG",
+    "PRGn",
+    "PuOr",
+    "RdBu",
+    "RdGy",
+    "RdYlBu",
+    "RdYlGn",
+    "Spectral"};
+
+    {"Accent",
+    "Dark2",
+    "Paired",
+    "Pastel1",
+    "Pastel2",
+    "Set1",
+    "Set2",
+    "Set3" };
+
+    {"Blues",
+    "BuGn",
+    "BuPu",
+    "GnBu",
+    "Greens",
+    "Greys",
+    "OrRd",
+    "Oranges",
+    "PuBu",
+    "PuBuGn",
+    "PuRd",
+    "Purples",
+    "RdPu",
+    "Reds",
+    "YlGn",
+    "YlGnBu",
+    "YlOrBr",
+    "YlOrrD"}
+    };
+
+    keep_going = false;
+
+    cat = [];
+    cat = listdlg ("ListString", scheme_labels, ...
+    "name", "Select Color scheme category for plotting",...
+    "SelectionMode", "single", ...
+    "promptstring",  "Select one category:",...
+    "ListSize", [300 80]);
+
+    if ~isempty(cat)
+
+      keep_going = true;
+
+    endif
+
+    if isequal(keep_going, true)
+
+      sch = [];
+      sch = listdlg ("liststring", schemes(cat, :), ...
+      "name", "select color scheme for plotting",...
+      "selectionmode", "single", ...
+      "promptstring",  sprintf("select one item from ""%s"" scheme",...
+      scheme_labels{cat}),...
+      "listsize", [300 150]);
+
+      if ~isempty(sch)
+
+        color_scheme = schemes{cat}{sch};
+
+      else
+
+        wrn_hand = warndlg("no scheme item selected. applying qualitative-dark2->[2,2]");
+        waitfor(wrn_hand);
+
+        color_scheme = schemes{2}{2};
+
+      endif
+
+    else
+
+      wrn_hand = warndlg("no scheme category selected. applying qualitative-dark2->[2,2]");
+      waitfor(wrn_hand);
+
+      color_scheme = schemes{2}{2}
+
+    endif
+
+    % define some distinguishable colors according to the following schemes:
+    % diverging | qualitative | sequential
+    % for more information, please read brewermap.m
+
+    % Diverging | Qualitative | Sequential
+    % ----------|-------------|------------------
+    %  BrBG     |  Accent     |  Blues    PuBuGn
+    %  PiYG     |  Dark2      |  BuGn     PuRd
+    %  PRGn     |  Paired     |  BuPu     Purples
+    %  PuOr     |  Pastel1    |  GnBu     RdPu
+    %  RdBu     |  Pastel2    |  Greens   Reds
+    %  RdGy     |  Set1       |  Greys    YlGn
+    %  RdYlBu   |  Set2       |  OrRd     YlGnBu
+    %  RdYlGn   |  Set3       |  Oranges  YlOrBr
+    %  Spectral |             |  PuBu     YlOrRd
+
+    % plot our results on the same graph
+    figure
+
+    schemes = brewermap(total_sets, color_scheme);
+    colorptr = 1;
+
+    spectra_handle = cell(1, total_sets);
+
+    for col_idx=2:total_sets + 1
+
+      % Plot data sets
+      spectra_handle(col_idx-1) = plot(wn,data_matrix(:,col_idx), 'color',...
+      schemes(colorptr, :), 'linewidth', 1.5);
+
+      hold on
+
+      % Plotting peaks
+      peaks_indices = peaks_pos{:,col_idx-1};
+
+
+      peaks_handle = plot(wn(peaks_indices), data_matrix(peaks_indices, col_idx), 'x',...
+      "MarkerSize", 10,...
+      "LineWidth", 1);
+
+      set(peaks_handle, 'visible', 'on')
+
+      colorptr = colorptr + 1;
+
+    end
+
+    grid on
+    grid minor
+
+    legendHandle = legend([spectra_handle{1, :}], filenames);
+    set(legendHandle, "interpreter", "none");
+
+    % plot title
+    title(sprintf("Experimental results: %s", session_name{1}), 'fontsize',16);
+
+    % create xlabel
+    xlabel('Wavelength [nm]', 'fontsize',12);
+
+    % create ylabel
+    ylabel('Absorbance [arb. units]', 'fontsize',12);
+
+    % ask user if data should be saved
+    save_btn = questdlg ("Do you want to save .csv file?",...
+    "Save file?", "Yeah", "Nope", "Yeah");
+
+    % write csv in the same location as the incoming data
+    if strcmp(save_btn, "Yeah")
+
+      default_filenames = {"experiment"};
+      desired_filenames = inputdlg ("give me a filenames:", "filename",...
+      [1, 30], default_filenames)
+
+      if isempty(desired_filenames)
+
+        desired_filenames = {};
+        desired_filenames{1} = default_filenames{1};
+
+      elseif strcmp(desired_filenames{1}, '')
+
+        desired_filenames = {};
+        desired_filenames{1} = default_filenames{1};
+
+        endi f
+
         filenames_csv = sprintf("%s%s-%s_%s.csv",pathname, session_name{1}, ...
-        desired_filenames{1}, strftime ("%d-%m-%Y_%H%M%S", localtime (time ())));
+        desired_filenames{1}, strftime ("%d-%m-%Y_%H%M%S", localtime (time())));
 
         dlmwrite (filenames_csv, data_matrix);
 
-      else
-
-        disp("Data was NOT saved! (you can still save the plot)");
-
-        msg_handle = msgbox("Data was NOT saved! (you can still save the plot)",...
-        'Data not saved', 'warn');
-
-        waitfor(msg_handle)
+        printf("\r\n%s%s", header_asteriscs,header_asteriscs);
+        fprintf("\nData saved as:\r\n %s", filenames_csv);
+        printf("\r\n%s%s", header_asteriscs,header_asteriscs);
 
       endif
 
-    endif
+    else
 
+      printf("\r\n%s\r\n", header_asteriscs);
+      fprintf("\t%s\n","Data was not saved!\n\t(you can still save the plot)");
+      printf("%s\r\n", header_asteriscs);
+
+      # msg_handle = msgbox("Data was not saved! (you can still save the plot)",...
+      # 'Data not saved', 'warn');
+      # waitfor(msg_handle)
+
+    endif
 
   else
 
-    disp("No data to be processed...Bye");
+    printf("\r\n%s\r\n", header_asteriscs);
+    disp("No data to be processed...bye");
+    printf("\n%s\r\n", header_asteriscs);
 
     endif

@@ -1,16 +1,22 @@
 ## **UV-Vis Data Processor and Plotter**
 
-With this short script you will be able to take manual measurements
-and merge their values into a single _.csv_ ("comma-separated values") file
+For users of the UV-Vis system Genesys 10S short script you will be able to process data
+captured during manual measurements and merge their values into a single _.csv_
+("comma-separated values") file.
 
-This eliminates the need (and the _urge_) of using the VisionLite software (for now ¬¬)
+This eliminates the need (and the _urge_) of using the VisionLite* software (for now ¬¬)
+
+*_VisionLite has been discontinued_
 
 ## **Dependencies**
 
 1. Developed in [Octave](https://octave.org)* and compatible (not fully tested) with Matlab
-*_please not that all research PCs have Octave preinstalled_
+2. The script calls the _signal_ package
 
-2. The script uses the code from [BrewerMap](https://github.com/DrosteEffect/BrewerMap)
+*_Nanofunctional users: please note that all research PCs have Octave preinstalled_
+
+3. The script uses the code from [BrewerMap](https://github.com/DrosteEffect/BrewerMap) which provides
+accurate color schemes for data visualization
 
 ## **To use:**
 
@@ -20,10 +26,11 @@ This eliminates the need (and the _urge_) of using the VisionLite software (for 
 4. Merged data will be saved in _.csv_ format
 5. Final data files can be easily opened with LibreOffice Calc (preinstalled in all research PCs)
 
-## TODO:
-[ ] Add peaks detection
-[ ] Add markers
-[ ] Correct single file reading
+## **TODO:**
+    [ ] Add peaks detection
+    [ ] Add markers
+    [x] Correct single file reading
+    [ ] Change axis units label
 
 
 ## **Screenshots**
