@@ -33,6 +33,7 @@ accurate color schemes for data visualization.
     [x] Add markers
     [x] Correct single file reading
     [x] Change axis units label
+    [ ] Add headers to the final csv file
     [ ] Get Daniel some beer?
 
 ## **Screenshots**
