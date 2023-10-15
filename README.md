@@ -37,7 +37,7 @@ accurate color schemes for data visualization.
 
 ## **Screenshots**
 
-- A typical Methyl Blue plot using "_Sequential-PuBu" color scheme:
+- A typical Methyl Blue plot using "_Sequential-PuBu_" color scheme:
 
 ![image](https://github.com/dzalf/UV-Vis-Data-Reader/blob/peaks-detection/Test%20Data/Console%20and%20Plot%20Outputs.png)
 
