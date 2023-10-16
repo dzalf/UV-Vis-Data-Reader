@@ -1,4 +1,4 @@
-  %  ******************** nanofunctional materials group *********************
+﻿  %  ******************** nanofunctional materials group *********************
   %
   % File: UV-vis-loader.m
   % Brief:  Data import, experiment merging, plotting and logging into csv files
