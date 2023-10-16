@@ -1,4 +1,4 @@
-  %  ******************** nanofunctional materials group *********************
+﻿  %  ******************** nanofunctional materials group *********************
   %
   % File: UV-vis-loader.m
   % Brief:  Data import, experiment merging, plotting and logging into csv files
@@ -216,14 +216,14 @@
 
     for idx = 1:total_sets
 
-      fprintf("⎡Set >>\t");
+      fprintf("╔Set >>\t");
 
       peaks_indices = peaks_pos{:,idx};
       peaks_wavelength = wn(peaks_pos{:,idx});
       peaks_values = data_matrix(peaks_indices, idx+1);
 
       fprintf("%s\r\n", filenames{idx});
-      fprintf("⎥WL  >>\t");
+      fprintf("║WL  >>\t");
       # Print wavelength locations on the top row
       for pk_idx=1:length(peaks_wavelength)
 
@@ -239,7 +239,7 @@
       endfor
 
       # Print peak heights
-      fprintf("⎣H   >>\t");
+      fprintf("╚H   >>\t");
       for pk_idx=1:length(peaks_values)
 
         fprintf("%0.3f", peaks_values(pk_idx));
