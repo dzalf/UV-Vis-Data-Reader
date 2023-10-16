@@ -1,4 +1,4 @@
-﻿  %  ******************** nanofunctional materials group *********************
+  %  ******************** nanofunctional materials group *********************
   %
   % File: UV-vis-loader.m
   % Brief:  Data import, experiment merging, plotting and logging into csv files
@@ -197,8 +197,13 @@
       % Find data peaks
       fprintf("Finding peaks...\r\n");
 
-      [pks, pks_loc, pks_ext] = findpeaks(data_matrix(:,colptr),...
-      "DoubleSided",...
+
+      % Note:
+      % The trick here is to use the absolute value and compute the
+      % peaks single-sided!
+
+      [pks, pks_loc, pks_ext] = findpeaks(abs(data_matrix(:,colptr)),...
+      # "DoubleSided",...
       "MinPeakHeight", peak_threshold);
 
       peaks_vals(:,file_idx) = pks;
@@ -216,46 +221,64 @@
 
     for idx = 1:total_sets
 
-      fprintf("╔Set >>\t");
+
 
       peaks_indices = peaks_pos{:,idx};
       peaks_wavelength = wn(peaks_pos{:,idx});
-      peaks_values = data_matrix(peaks_indices, idx+1);
+      peaks_values = data_matrix(peaks_indices, idx+1); % -mean_data_set;
 
-      fprintf("%s\r\n", filenames{idx});
-      fprintf("║WL  >>\t");
-      # Print wavelength locations on the top row
-      for pk_idx=1:length(peaks_wavelength)
+      fprintf("╔Set >>\t");
 
-        fprintf("%d", peaks_wavelength(pk_idx));
+      if isempty(peaks_indices)
 
-        % Print separators
-        if (pk_idx < length(peaks_wavelength))
-          fprintf(" ¦ ");
-        else
-          fprintf("\n");
-        endif
+        fprintf("%s\r\n", filenames{idx});
+        fprintf("║WL  >>\t <No peaks >= %.2f!>\n", peak_threshold);
+        fprintf("╚H   >>\t <No peaks >= %.2f!>\r\n\n", peak_threshold);
 
-      endfor
+      else
 
-      # Print peak heights
-      fprintf("╚H   >>\t");
-      for pk_idx=1:length(peaks_values)
+        fprintf("%s\r\n", filenames{idx});
+        fprintf("║WL  >>\t");
+        # Print wavelength locations on the top row
+        for pk_idx=1:length(peaks_wavelength)
 
-        fprintf("%0.3f", peaks_values(pk_idx));
+          fprintf("%d", peaks_wavelength(pk_idx));
 
-        % Print separators
-        if (pk_idx < length(peaks_values))
-          fprintf(" ¦ ");
-        else
-          fprintf("\n");
-        endif
+          % Print separators
+          if (pk_idx < length(peaks_wavelength))
+            fprintf(" ¦ ");
+          else
+            fprintf("\n");
+          endif
 
-      endfor
+        endfor
 
-      fprintf("\r\n");
+        # Print peak heights
+        fprintf("╚H   >>\t");
+
+        for pk_idx=1:length(peaks_values)
+
+          fprintf("%0.3f", peaks_values(pk_idx));
+
+          % Print separators
+          if (pk_idx < length(peaks_values))
+            fprintf(" ¦ ");
+          else
+            fprintf("\n");
+          endif
+
+        endfor
+
+        mean_data_set = mean(data_matrix(:,idx+1))
+
+        fprintf("\r\n");
+
+
+
+      endif
 
     endfor
+
 
     # ****************************
     #       Data import done!
