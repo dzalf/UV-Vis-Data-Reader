@@ -25,7 +25,9 @@ accurate color schemes for data visualization.
 4. Merged data will be saved in _.csv_ format.
 5. Data peaks are computed based on an amplitude threshold provided by the user.
 6. Peak finding results are displayed in the console for each data set. These values are plotted on top of the graphs using markers.
-7. Final data files can be easily opened with _LibreOffice Calc_ (preinstalled on all research PCs).
+7. Files are saved using the following format:
+	`_<session-name>-<filename>_<DD-MM-YYY>_<HHMMss>.csv_`
+8. Final data files can be easily opened with _LibreOffice Calc_ (preinstalled on all research PCs).
 
 ## **TODO:**
 
@@ -33,7 +35,7 @@ accurate color schemes for data visualization.
     [x] Add markers
     [x] Correct single file reading
     [x] Change axis units label
-    [ ] Add headers to the final csv file
+    [x] Add header labels to the final csv file
     [ ] Get Daniel some beer?
 
 ## **Screenshots**

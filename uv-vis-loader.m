@@ -13,7 +13,8 @@
   clear
   close all % --> uncomment line if you want to keep plots open
 
-  pkg load signal  % requires a connection to download the package
+  pkg load signal  % needed for peak finding
+  pkg load io      % needed for csv writing
   addpath(sprintf("%s\\%s", pwd(),"libs"))  %include helper modules/libs
 
   header_asteriscs = "***********************************************";
@@ -35,7 +36,7 @@
 
   elseif strcmp(session_name{1}, '')
 
-    session_name = default_session{1};
+    session_name = default_session;
 
   endif
 
@@ -422,7 +423,7 @@
 
       default_filenames = {"experiment"};
       desired_filenames = inputdlg ("give me a filenames:", "filename",...
-      [1, 30], default_filenames)
+      [1, 30], default_filenames);
 
       if isempty(desired_filenames)
 
@@ -434,18 +435,20 @@
         desired_filenames = {};
         desired_filenames{1} = default_filenames{1};
 
-        endi f
-
-        filenames_csv = sprintf("%s%s-%s_%s.csv",pathname, session_name{1}, ...
-        desired_filenames{1}, strftime ("%d-%m-%Y_%H%M%S", localtime (time())));
-
-        dlmwrite (filenames_csv, data_matrix);
-
-        printf("\r\n%s%s", header_asteriscs,header_asteriscs);
-        fprintf("\nData saved as:\r\n %s", filenames_csv);
-        printf("\r\n%s%s", header_asteriscs,header_asteriscs);
-
       endif
+
+      filenames = ['Wavelength', filenames];
+
+      filenames_csv = sprintf("%s%s-%s_%s.csv",pathname, session_name{1}, ...
+      desired_filenames{1}, strftime ("%d-%m-%Y_%H%M%S", localtime (time())));
+
+      cell2csv(filenames_csv, filenames)
+      dlmwrite (filenames_csv, data_matrix, "-append");
+
+      printf("\r\n%s%s", header_asteriscs,header_asteriscs);
+      fprintf("\nData saved as:\r\n %s", filenames_csv);
+      printf("\r\n%s%s", header_asteriscs,header_asteriscs);
+
 
     else
 
@@ -458,6 +461,8 @@
       # waitfor(msg_handle)
 
     endif
+
+
 
   else
 
